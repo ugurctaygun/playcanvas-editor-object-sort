@@ -10,8 +10,7 @@
 
 (function () {
   function init() {
-    createButton();
-    createPopup();
+    renderContainer();
   }
 
   function sortEntityObject() {
@@ -76,37 +75,87 @@
     }, 1000);
   }
 
-  function createPopup() {
-    const popupOverlay = new pcui.Container();
-    const optionsElement = new pcui.SelectInput({
-      options: [
-        { t: "Hex", v: "Hex" },
-        { t: "Grid", v: "Grid" },
-      ],
-      defaultValue: [{ t: "Grid", v: "Grid" }],
-    });
-    popupOverlay.append(optionsElement);
-    popupOverlay.style.position = "absolute";
-    popupOverlay.style.background = "#364346";
-    popupOverlay.style.bottom = "30px";
-    popupOverlay.style.right = "10px";
-    popupOverlay.style.width = "150px";
-    editor.call("layout.viewport").append(popupOverlay);
+  function createPCUIElement(type, properties, styles, children = []) {
+    const element = new pcui[type](properties);
+
+    if (styles) {
+      for (let [key, value] of Object.entries(styles)) {
+        element.style[key] = value;
+      }
+    }
+
+    children.forEach((child) => element.append(child));
+
+    return element;
   }
 
-  function createButton() {
-    const btn = new pcui.Button({ text: "Generate Hex Grid" });
-    btn.style.position = "absolute";
-    btn.style.bottom = "10px";
-    btn.style.right = "10px";
-    editor.call("layout.viewport").append(btn);
+  function createLabeledContainer(labelText, children = []) {
+    return createPCUIElement(
+      "LabelGroup",
+      { text: labelText },
+      { fontSize: "12px" },
+      children
+    );
+  }
 
-    btn.on("click", () => {
-      const popup = document.getElementById("sortPopup");
-      if (popup) {
-        popup.style.display = "block";
-      }
+  function selectionContainer(labelText, options, defaultVale) {
+    const selectInput = createPCUIElement("SelectInput", {
+      options: options,
+      defaultValue : defaultVale,
     });
+
+    const labeledContainer = createLabeledContainer(labelText, [selectInput]);
+
+    return labeledContainer;
+  }
+
+  function numericInputContainer(labelText) {
+    const selectInput = createPCUIElement("NumericInput", {
+      min: 1,
+    });
+
+    const labeledContainer = createLabeledContainer(labelText, [selectInput]);
+
+    return labeledContainer;
+  }
+
+  const mainContainer = createPCUIElement(
+    "Container",
+    {},
+    {
+      position: "absolute",
+      background: "#364346",
+      bottom: "30px",
+      right: "10px",
+      width: "200px",
+    }
+  );
+
+  const btn = createPCUIElement("Button", { text: "Sort Entities" });
+
+  function renderContainer() {
+    mainContainer.append(
+      selectionContainer(
+        "Map Type",
+        [
+          { t: "Hex", v: "Hex" },
+          { t: "Grid", v: "Grid" },
+        ],
+        "Grid"
+      )
+    );
+    mainContainer.append(
+      numericInputContainer(
+        "Map Width"
+      )
+    );
+    mainContainer.append(
+      numericInputContainer(
+        "Map Height"
+      )
+    );
+    mainContainer.append(btn);
+    editor.call("layout.viewport").append(mainContainer);
   }
 
   editor.once("load", () => init());
