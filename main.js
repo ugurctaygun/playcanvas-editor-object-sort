@@ -13,7 +13,7 @@
     renderContainer();
   }
 
-  function sortEntityObject() {
+  function sortEntityObject(mapWidth, mapHeight, mapType) {
     var selectedEntities = editor.selection.items;
 
     if (selectedEntities.length === 0) {
@@ -24,8 +24,6 @@
     var mapHolder = selectedEntities[0];
     var children = mapHolder.children;
 
-    var mapWidth = 10;
-    var mapHeight = 10;
     var tileSize = 1;
 
     if (children.length === 0) {
@@ -35,6 +33,20 @@
 
     editor.call("entities:history:startBatch", "Sort Children");
 
+    if (mapType == "Grid") {
+      gridSort(children , mapWidth, mapHeight, tileSize)
+    } else {
+      hexSort(children, mapWidth, mapHeight, tileSize);
+    }
+
+    editor.call("entities:history:endBatch");
+
+    console.log("Children sorted and changes saved");
+
+    markSceneDirtyAndSave();
+  }
+
+  function hexSort(children, mapWidth, mapHeight, tileSize) {
     var i = 0;
     for (var y = 0; y < mapHeight; y++) {
       for (var x = 0; x < mapWidth; x++) {
@@ -51,6 +63,30 @@
         child.set("position", pos);
 
         editor.call("entities:insert", child);
+        i++;
+      }
+      if (i >= children.length) {
+        break;
+      }
+    }
+  }
+
+  function gridSort(children , mapWidth, mapHeight, tileSize) {
+    var i = 0;
+    for (var y = 0; y < mapHeight; y++) {
+      for (var x = 0; x < mapWidth; x++) {
+        if (i >= children.length) {
+          break;
+        }
+
+        var posX = x * tileSize;
+        var posY = y * tileSize;
+        var pos = [posX, 0, posY];
+
+        var child = children[i];
+        child.set("position", pos);
+
+        editor.call("entities:insert", child);
 
         i++;
       }
@@ -58,12 +94,6 @@
         break;
       }
     }
-
-    editor.call("entities:history:endBatch");
-
-    console.log("Children sorted and changes saved");
-
-    markSceneDirtyAndSave();
   }
 
   function markSceneDirtyAndSave() {
@@ -98,10 +128,11 @@
     );
   }
 
-  function selectionContainer(labelText, options, defaultVale) {
+  function selectionContainer(labelText, options, defaultValue, id) {
     const selectInput = createPCUIElement("SelectInput", {
       options: options,
-      defaultValue : defaultVale,
+      defaultValue: defaultValue,
+      id: id,
     });
 
     const labeledContainer = createLabeledContainer(labelText, [selectInput]);
@@ -109,9 +140,10 @@
     return labeledContainer;
   }
 
-  function numericInputContainer(labelText) {
+  function numericInputContainer(labelText, id) {
     const selectInput = createPCUIElement("NumericInput", {
       min: 1,
+      id: id,
     });
 
     const labeledContainer = createLabeledContainer(labelText, [selectInput]);
@@ -125,13 +157,25 @@
     {
       position: "absolute",
       background: "#364346",
-      bottom: "30px",
-      right: "10px",
+      bottom: "15px",
+      right: "15px",
       width: "200px",
     }
   );
 
-  const btn = createPCUIElement("Button", { text: "Sort Entities" });
+  const sortButton = createPCUIElement("Button", { text: "Sort Entities" });
+
+  sortButton.on("click", () => {
+    const mapType = document.querySelector(
+      "#map-type .pcui-select-input-value"
+    )?.innerText;
+    const mapWidth = document.querySelector("#map-width input")?.value;
+    const mapHeight = document.querySelector("#map-height input")?.value;
+
+    if (mapHeight && mapType && mapWidth) {
+      sortEntityObject(mapWidth, mapHeight, mapType);
+    }
+  });
 
   function renderContainer() {
     mainContainer.append(
@@ -141,20 +185,14 @@
           { t: "Hex", v: "Hex" },
           { t: "Grid", v: "Grid" },
         ],
-        "Grid"
+        "Grid",
+        "map-type"
       )
     );
-    mainContainer.append(
-      numericInputContainer(
-        "Map Width"
-      )
-    );
-    mainContainer.append(
-      numericInputContainer(
-        "Map Height"
-      )
-    );
-    mainContainer.append(btn);
+    mainContainer.append(numericInputContainer("Map Width", "map-width"));
+    mainContainer.append(numericInputContainer("Map Height", "map-height"));
+    mainContainer.append(sortButton);
+
     editor.call("layout.viewport").append(mainContainer);
   }
 
